@@ -2,11 +2,13 @@ import sys
 from enum import Enum
 import pyqtgraph as pg
 import numpy as np
+
 from scipy.fft import fft
+from sklearn import svm
 
 from PyQt5 import QtWidgets
 from pyqtgraph.Qt import QtGui, QtCore
-from pyqtgraph.flowchart import Flowchart
+from pyqtgraph.flowchart import Flowchart, Node
 import pyqtgraph.flowchart.library as fclib
 
 from DIPPID import SensorUDP, SensorSerial, SensorWiimote
@@ -18,7 +20,7 @@ class GestureNodeState(Enum):
     INACTIVE = 3
 
 # implement a DisplayTextNode that displays the currently recognized/predicted category on the screen.
-class DisplayTextNode(QtWidgets.QWidget):
+class DisplayTextNode(Node):
     nodeName = 'text'
 
 
@@ -33,6 +35,8 @@ fclib.registerNodeType(DisplayTextNode, [('text',)])
 class SvmNode(Node):
     nodeName = 'svm'
 
+    state = GestureNodeState.INACTIVE
+
     def __init__(self, name):  
         Node.__init__(self, name, terminals={  
             'dataIn': {'io': 'in'},
@@ -43,13 +47,69 @@ class SvmNode(Node):
         self.gestures = ['jump', 'run', 'throw'] 
         self.init_gui()
 
-    def.init_gui(self):
+    def init_gui(self):
         self.gui = QtGui.QWidget()
         self.layout = QtGui.QVBoxLayout()
         self.mode_layout = QtGui.QGridLayout()
 
         # init buttons
+        self.init_buttons()
+        self.init_mode_buttons()
 
+        self.layout.addWidget(self.add_button)
+        self.layout.addWidget(self.edit_button)
+        self.layout.addWidget(self.delete_button)
+
+        self.gui.setLayout(self.layout)
+
+    def init_buttons(self):
+        self.add_button = QtGui.QPushButton('add gesture')
+        self.edit_button = QtGui.QPushButton('edit gesture')
+        self.delete_button = QtGui.QPushButton("delete gesture")
+
+        self.add_button.clicked.connect(self.on_add_button_clicked)
+        self.edit_button.clicked.connect(self.on_edit_button_clicked)
+        self.delete_button.clicked.connect(self.on_delete_button_clicked)
+
+    def init_mode_buttons(self):
+        self.label_mode = QtGui.QLabel('select mode:')
+        self.layout.addWidget(self.label_mode)
+
+        self.inactive_button = QtWidgets.QRadioButton('inactive')
+        self.layout.addWidget(self.inactive_button)
+
+        self.training_button = QtWidgets.QRadioButton('training')
+        self.layout.addWidget(self.training_button)
+
+        self.prediction_button = QtWidgets.QRadioButton('prediction')
+        self.layout.addWidget(self.prediction_button)
+
+        self.training_button.clicked.connect(lambda: self.on_mode_button_clicked(self.training_button))
+        self.prediction_button.clicked.connect(lambda: self.on_mode_button_clicked(self.prediction_button))
+        self.inactive_button.clicked.connect(lambda: self.on_mode_button_clicked(self.inactive_button))
+
+    def on_add_button_clicked(self):
+        print("add button clicked")
+
+    def on_edit_button_clicked(self):
+        print("edit button clicked")
+
+    def on_delete_button_clicked(self):      
+        print("delete button clicked")
+
+    def on_mode_button_clicked(self, buttonType):
+        if buttonType is self.training_button:
+            self.state = GestureNodeState.TRAINING
+            self.train_help_label.setText("Select a gesture in the list and record performing the gesture" \
+                                                "by pressing the record button")
+
+        elif buttonType is self.prediction_button:
+            self.state = GestureNodeState.PREDICTING
+            self.train_help_label.setText("")
+
+        else:
+            self.state = GestureNodeState.INACTIVE
+            self.train_help_label.setText("")
 
 
 
@@ -59,7 +119,7 @@ class SvmNode(Node):
     def process(self, **kargs):
         return {'frequency': self.predict}
 
-fclib.registerNodeType(FftNode, [('fft',)])
+fclib.registerNodeType(SvmNode, [('fft',)])
 
 
 # reads in information from a BufferNode and outputs a frequency spectrogram
@@ -94,9 +154,9 @@ def create_connect_nodes(chart):
     chart.connectTerminals(dippid_node['accelX'], buffer_node_x['dataIn'])
     chart.connectTerminals(dippid_node['accelY'], buffer_node_y['dataIn'])
     chart.connectTerminals(dippid_node['accelZ'], buffer_node_z['dataIn'])
-    chart.connectTerminals(buffer_node_x['dataOut'], fft_node['in_x'])
-    chart.connectTerminals(buffer_node_y['dataOut'], fft_node['in_y'])
-    chart.connectTerminals(buffer_node_z['dataOut'], fft_node['in_z'])
+    chart.connectTerminals(buffer_node_x['dataOut'], fft_node['accelX'])
+    chart.connectTerminals(buffer_node_y['dataOut'], fft_node['accelY'])
+    chart.connectTerminals(buffer_node_z['dataOut'], fft_node['accelZ'])
 
 def start():
     app = QtWidgets.QApplication([])
@@ -114,6 +174,8 @@ def start():
     create_connect_nodes(fc)
 
     win.show()
+    if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+        sys.exit(QtGui.QApplication.instance().exec_())
 
 
 if __name__ == '__main__':
