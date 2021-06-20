@@ -1,0 +1,28 @@
+1) What is the title of the paper?
+
+"Avoiding Pitfalls When Using Machine Learning in HCI Studies"
+
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+2) What are some common use cases for machine learning in practical applications or research prototypes?
+
+Model human behavior, develop and predict novel user interactions, gestures regognition, 
+optimize system resources, provide intelligent mobile notifications
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+3. Which problems of machine learning do the authors of the paper identify? 
+   Explain one of them in detail.
+
+One problem of machine learning methods is that the prediction accuracy cannot replace 
+classic hypothesis testing and correlation or causation analysis. This accours e.g. when acquiring 
+conclusions about human behavior. Researches have be really careful with interpretations about the 
+classifications of human behavior and if they are really linked to the emotional state of the users.
+
+<><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+
+4. What are the credentials of the authors with regard to machine learning? 
+   Have they published research on machine learning (or using machine-learning techniques) previously?
+
+
+Recently published research on machine learning:
+Kostakos, V., Ferreira, D., Goncalves, J., and Hosio, S. Modelling smartphone usage: 
+A Markov state transition model. Proc. of the 2016 International Joint Conference on 
+Pervasive and Ubiquitous Computing. ACM, New York, 2016.
