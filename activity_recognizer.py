@@ -140,7 +140,16 @@ class SvmNode(Node):
         self.retrain_button.clicked.connect(self.on_retrain_button_clicked)
         self.delete_button.clicked.connect(self.on_delete_button_clicked)
 
+    # training ui: start and stop recording button
+    # hide other widgets from activity_layout ?
+    def init_training_ui(self):
+        pass
 
+    #prediction ui: start and stop button
+    def init_prediction_ui(self):
+        pass
+
+    # new activity is added to the list
     def on_add_button_clicked(self):
         self.saved_activities.append(self.activity_name.text())
         self.activity_name.setText("")
@@ -159,12 +168,14 @@ class SvmNode(Node):
                                                 "by pressing the record button")
             self.activity_name.setText('')
             self.activity_name.setVisible(True)
+            self.init_training_ui()
 
         elif buttonType is self.prediction_button:
             self.state = GestureNodeState.PREDICTING
             self.mode_text_label.setText("press 'button 1' and execute an acitivity. after releasing it " 
                                             " it will predict your activity")
             self.activity_name.setVisible(False)
+            self.init_prediction_ui()
 
         else:
             self.state = GestureNodeState.INACTIVE
