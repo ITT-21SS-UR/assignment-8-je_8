@@ -21,10 +21,38 @@ class GestureNodeState(Enum):
 
 # implement a DisplayTextNode that displays the currently recognized/predicted category on the screen.
 class DisplayTextNode(Node):
-    nodeName = 'text'
+    nodeName = 'display'
+
+    def __init__(self, name):  
+        Node.__init__(self, name, terminals={  
+            'dataIn': {'io': 'in'},
+            'prediction': {'io': 'out'},
+            })
+        self.init_ui()
+    
+    def init_ui(self):
+        self.ui = QtGui.QWidget()
+        self.layout = QtGui.QGridLayout()
+        predict_label = QtGui.QLabel("Prediction:")
+        self.layout.addWidget(predict_label)
+        self.text = QtGui.QLabel()
+        self.port = "5700"
+        self.text.setText(self.port)
+        self.layout.addWidget(self.text)
+        self.ui.setLayout(self.layout)
+    
+    def ctrlWidget(self):
+        return self.ui
+
+    def process(self, **kargs):
+        prediction = kargs['dataIn'][0]
+        self.text.setText(prediction)
+        return {'prediction': self.text}
 
 
-fclib.registerNodeType(DisplayTextNode, [('text',)])
+
+
+fclib.registerNodeType(DisplayTextNode, [('display',)])
 
         
 # can be switched between training mode and prediction mode and "inactive" via buttons in the configuration pane. 
@@ -44,18 +72,20 @@ class SvmNode(Node):
             })
         self.prediction = '' 
         # example gestures- add more?
-        self.activities = ['jump', 'run', 'throw'] 
+        self.saved_activities = ['jump', 'run', 'throw'] 
+        self.is_recording = False
+        #svm
         self.svc = svm.SVC()
-        self.init_gui()
+        self.init_ui()
 
-    def init_gui(self):
-        self.gui = QtGui.QWidget()
+    def init_ui(self):
+        self.ui = QtGui.QWidget()
         self.layout = QtGui.QVBoxLayout()
         self.mode_layout = QtGui.QGridLayout()
         self.activity_layout = QtGui.QGridLayout()
 
         # init buttons for the mode: 'inactive', 'training' or 'predicting'
-        self.init_mode_buttons()
+        self.init_mode_ui()
 
         # mode instructions
         self.mode_text_label = QtGui.QLabel()
@@ -64,27 +94,13 @@ class SvmNode(Node):
         self.activity_name.setVisible(False)
         self.mode_layout.addWidget(self.activity_name, 7, 0, 2, 2)
 
-        self.init_activity_buttons()
-
-        # self.layout.addWidget(self.add_button)
-        # self.layout.addWidget(self.edit_button)
-        # self.layout.addWidget(self.delete_button)
+        self.init_activity_ui()
         
         self.layout.addLayout(self.mode_layout)
         self.layout.addLayout(self.activity_layout)
-        self.gui.setLayout(self.layout)
+        self.ui.setLayout(self.layout)
 
-    def init_activity_buttons(self):
-        self.add_button = QtGui.QPushButton('add gesture')
-        self.edit_button = QtGui.QPushButton('edit gesture')
-        self.delete_button = QtGui.QPushButton("delete gesture")
-
-        self.add_button.clicked.connect(self.on_add_button_clicked)
-        self.edit_button.clicked.connect(self.on_edit_button_clicked)
-        self.delete_button.clicked.connect(self.on_delete_button_clicked)
-
-
-    def init_mode_buttons(self):
+    def init_mode_ui(self):
         self.label_mode = QtGui.QLabel('select mode:')
         self.layout.addWidget(self.label_mode)
 
@@ -100,11 +116,38 @@ class SvmNode(Node):
         self.prediction_button.clicked.connect(lambda: self.on_mode_button_clicked(self.prediction_button))
         self.inactive_button.clicked.connect(lambda: self.on_mode_button_clicked(self.inactive_button))
 
-    def on_add_button_clicked(self):
-        print("add button clicked")
 
-    def on_edit_button_clicked(self):
-        print("edit button clicked")
+    def init_activity_ui(self):
+        new_activity_label = QtGui.QLabel("create a new activity")
+        self.activity_layout.addWidget(new_activity_label)
+        self.activity_name = QtGui.QLineEdit()
+        self.activity_layout.addWidget(self.activity_name,7,0)
+
+        self.activity_select = QtWidgets.QComboBox()
+        self.activity_select.addItems(self.saved_activities)
+        self.add_button = QtGui.QPushButton('add actvity')
+        edit_activity_label = QtGui.QLabel("edit activity")
+        self.retrain_button = QtGui.QPushButton('retrain activity')
+        self.delete_button = QtGui.QPushButton("delete activity")
+
+        self.activity_layout.addWidget(self.add_button, 7,1)
+        self.activity_layout.addWidget(edit_activity_label)
+        self.activity_layout.addWidget(self.activity_select,9,0)
+        self.activity_layout.addWidget(self.retrain_button,9,1)
+        self.activity_layout.addWidget(self.delete_button,9,2)
+
+        self.add_button.clicked.connect(self.on_add_button_clicked)
+        self.retrain_button.clicked.connect(self.on_retrain_button_clicked)
+        self.delete_button.clicked.connect(self.on_delete_button_clicked)
+
+
+    def on_add_button_clicked(self):
+        self.saved_activities.append(self.activity_name.text())
+        self.activity_name.setText("")
+        self.activity_select.addItem(self.saved_activities[-1])
+
+    def on_retrain_button_clicked(self):
+        print("retrain button clicked")
 
     def on_delete_button_clicked(self):      
         print("delete button clicked")
@@ -112,27 +155,29 @@ class SvmNode(Node):
     def on_mode_button_clicked(self, buttonType):
         if buttonType is self.training_button:
             self.state = GestureNodeState.TRAINING
-            self.mode_text_label.setText("Select an activtiy in the list and record performing the activity" 
+            self.mode_text_label.setText("select an activtiy in the list and record performing the activity" 
                                                 "by pressing the record button")
             self.activity_name.setText('')
             self.activity_name.setVisible(True)
 
         elif buttonType is self.prediction_button:
             self.state = GestureNodeState.PREDICTING
-            self.mode_text_label.setText("Press 'Button 1' and execute an acitivity. After releasing it " 
+            self.mode_text_label.setText("press 'button 1' and execute an acitivity. after releasing it " 
                                             " it will predict your activity")
             self.activity_name.setVisible(False)
 
         else:
             self.state = GestureNodeState.INACTIVE
-            self.mode_text_label.setText("The Node is inactive. Choose 'prediction'-mode to predict a activity"  
+            self.mode_text_label.setText("the node is inactive. choose 'prediction'-mode to predict a activity"  
                                             " or 'training'-mode to train a new activity")
             self.activity_name.setVisible(False)
 
-
-
     def ctrlWidget(self):  
-        return self.gui
+        return self.ui
+
+    def predict_activity(self, kargs):
+        self.prediction = self.svc.predict(kargs['dataIn'])
+        print(self.prediction)
 
     def process(self, **kargs):
         return {'frequency': self.predict}
@@ -167,7 +212,7 @@ def create_connect_nodes(chart):
     buffer_node_z = chart.createNode("Buffer", pos=(100, 200))
     fft_node = chart.createNode("fft", pos=(200, 100))
     svm_node = chart.createNode("svm", pos=(300, 0))
-    display_node = chart.createNode("text", pos=(400,0))
+    display_node = chart.createNode("display", pos=(400,0))
 
     chart.connectTerminals(dippid_node['accelX'], buffer_node_x['dataIn'])
     chart.connectTerminals(dippid_node['accelY'], buffer_node_y['dataIn'])
