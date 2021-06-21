@@ -36,8 +36,7 @@ class DisplayTextNode(Node):
         predict_label = QtGui.QLabel("Prediction:")
         self.layout.addWidget(predict_label)
         self.text = QtGui.QLabel()
-        self.port = "5700"
-        self.text.setText(self.port)
+        self.text.setText("")
         self.layout.addWidget(self.text)
         self.ui.setLayout(self.layout)
     
@@ -83,21 +82,26 @@ class SvmNode(Node):
         self.layout = QtGui.QVBoxLayout()
         self.mode_layout = QtGui.QGridLayout()
         self.activity_layout = QtGui.QGridLayout()
+        self.activity_widg = QtGui.QWidget()
 
         # init buttons for the mode: 'inactive', 'training' or 'predicting'
         self.init_mode_ui()
 
         # mode instructions
         self.mode_text_label = QtGui.QLabel()
+        self.mode_text_label.setText("the node is inactive. choose 'prediction'-mode to predict a activity"  
+                                            " or 'training'-mode to train a new activity")
         self.mode_layout.addWidget(self.mode_text_label, 1, 0, 3, 3)
         self.activity_name = QtGui.QLineEdit()
         self.activity_name.setVisible(False)
         self.mode_layout.addWidget(self.activity_name, 7, 0, 2, 2)
 
-        self.init_activity_ui()
+        self.init_training_ui()
         
+        self.activity_widg.setLayout(self.activity_layout)
         self.layout.addLayout(self.mode_layout)
-        self.layout.addLayout(self.activity_layout)
+        self.layout.addWidget(self.activity_widg)
+        self.activity_widg.setVisible(False)
         self.ui.setLayout(self.layout)
 
     def init_mode_ui(self):
@@ -105,6 +109,8 @@ class SvmNode(Node):
         self.layout.addWidget(self.label_mode)
 
         self.inactive_button = QtWidgets.QRadioButton('inactive')
+        self.inactive_button.setChecked(True)
+    
         self.training_button = QtWidgets.QRadioButton('training')
         self.prediction_button = QtWidgets.QRadioButton('prediction')
         
@@ -117,7 +123,7 @@ class SvmNode(Node):
         self.inactive_button.clicked.connect(lambda: self.on_mode_button_clicked(self.inactive_button))
 
 
-    def init_activity_ui(self):
+    def init_training_ui(self):
         new_activity_label = QtGui.QLabel("create a new activity")
         self.activity_layout.addWidget(new_activity_label)
         self.activity_name = QtGui.QLineEdit()
@@ -127,23 +133,27 @@ class SvmNode(Node):
         self.activity_select.addItems(self.saved_activities)
         self.add_button = QtGui.QPushButton('add actvity')
         edit_activity_label = QtGui.QLabel("edit activity")
-        self.retrain_button = QtGui.QPushButton('retrain activity')
+        self.train_button = QtGui.QPushButton('train activity')
         self.delete_button = QtGui.QPushButton("delete activity")
+        self.record_button = QtGui.QPushButton("start recording")
+        self.stop_record_button = QtGui.QPushButton("stop recording")
 
         self.activity_layout.addWidget(self.add_button, 7,1)
         self.activity_layout.addWidget(edit_activity_label)
         self.activity_layout.addWidget(self.activity_select,9,0)
-        self.activity_layout.addWidget(self.retrain_button,9,1)
+        self.activity_layout.addWidget(self.train_button,9,1)
         self.activity_layout.addWidget(self.delete_button,9,2)
+        self.activity_layout.addWidget(self.record_button,10,1)
+        self.activity_layout.addWidget(self.stop_record_button,10,2)
+        self.record_button.hide()
+        self.stop_record_button.hide()
 
         self.add_button.clicked.connect(self.on_add_button_clicked)
-        self.retrain_button.clicked.connect(self.on_retrain_button_clicked)
+        self.train_button.clicked.connect(self.on_train_button_clicked)
         self.delete_button.clicked.connect(self.on_delete_button_clicked)
+        self.record_button.clicked.connect(self.on_record_button_clicked)
+        self.stop_record_button.clicked.connect(self.on_stop_record_button_clicked)
 
-    # training ui: start and stop recording button
-    # hide other widgets from activity_layout ?
-    def init_training_ui(self):
-        pass
 
     #prediction ui: start and stop button
     def init_prediction_ui(self):
@@ -155,8 +165,15 @@ class SvmNode(Node):
         self.activity_name.setText("")
         self.activity_select.addItem(self.saved_activities[-1])
 
-    def on_retrain_button_clicked(self):
-        print("retrain button clicked")
+    def on_train_button_clicked(self):
+        self.record_button.show()
+        self.stop_record_button.show()
+
+    def on_record_button_clicked(self):
+        self.is_recording = True
+    
+    def on_stop_record_button_clicked(self):
+        self.is_recording = False
 
     def on_delete_button_clicked(self):      
         print("delete button clicked")
@@ -167,21 +184,20 @@ class SvmNode(Node):
             self.mode_text_label.setText("select an activtiy in the list and record performing the activity" 
                                                 "by pressing the record button")
             self.activity_name.setText('')
-            self.activity_name.setVisible(True)
-            self.init_training_ui()
+            self.activity_widg.setVisible(True)
 
         elif buttonType is self.prediction_button:
             self.state = GestureNodeState.PREDICTING
+            self.activity_widg.setVisible(False)
             self.mode_text_label.setText("press 'button 1' and execute an acitivity. after releasing it " 
                                             " it will predict your activity")
-            self.activity_name.setVisible(False)
             self.init_prediction_ui()
 
         else:
             self.state = GestureNodeState.INACTIVE
+            self.activity_widg.setVisible(False)
             self.mode_text_label.setText("the node is inactive. choose 'prediction'-mode to predict a activity"  
                                             " or 'training'-mode to train a new activity")
-            self.activity_name.setVisible(False)
 
     def ctrlWidget(self):  
         return self.ui
@@ -193,7 +209,7 @@ class SvmNode(Node):
     def process(self, **kargs):
         return {'frequency': self.predict}
 
-fclib.registerNodeType(SvmNode, [('fft',)])
+fclib.registerNodeType(SvmNode, [('svm',)])
 
 
 # reads in information from a BufferNode and outputs a frequency spectrogram
@@ -208,10 +224,17 @@ class FftNode(Node):
             'frequency': {'io': 'out'},
             })
 
-    def process(self, **kwds):
-        # kwds will have one keyword argument per input terminal.
+    def calc_frequency(self, val):
+        return [np.abs(np.fft.fft(val) / len(values))[1:len(val) // 2]]
 
-        return {'freqency': frequency}
+    def process(self, **kwds):
+        fft_x = self.calc_frequency(kwargs[accelX.value])
+        fft_y = self.calc_frequency(kwargs[accelY.value])
+        fft_z = self.calc_frequency(kwargs[accelZ.value])
+        fft = np.array([fft_x, fft_y, fft_z])
+
+        # not sure. maybe only fft_x?
+        return {'frequency': fft} 
 
 fclib.registerNodeType(FftNode, [('fft',)])
 
@@ -236,6 +259,7 @@ def start():
     app = QtWidgets.QApplication([])
 
     win = QtGui.QMainWindow()
+    win.resize(600,600)
     win.setWindowTitle("Activity Recognizer")
     central_widget = QtGui.QWidget()
     win.setCentralWidget(central_widget)
