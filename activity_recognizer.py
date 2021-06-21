@@ -44,25 +44,37 @@ class SvmNode(Node):
             })
         self.prediction = '' 
         # example gestures- add more?
-        self.gestures = ['jump', 'run', 'throw'] 
+        self.activities = ['jump', 'run', 'throw'] 
+        self.svc = svm.SVC()
         self.init_gui()
 
     def init_gui(self):
         self.gui = QtGui.QWidget()
         self.layout = QtGui.QVBoxLayout()
         self.mode_layout = QtGui.QGridLayout()
+        self.activity_layout = QtGui.QGridLayout()
 
-        # init buttons
-        self.init_buttons()
+        # init buttons for the mode: 'inactive', 'training' or 'predicting'
         self.init_mode_buttons()
 
-        self.layout.addWidget(self.add_button)
-        self.layout.addWidget(self.edit_button)
-        self.layout.addWidget(self.delete_button)
+        # mode instructions
+        self.mode_text_label = QtGui.QLabel()
+        self.mode_layout.addWidget(self.mode_text_label, 1, 0, 3, 3)
+        self.activity_name = QtGui.QLineEdit()
+        self.activity_name.setVisible(False)
+        self.mode_layout.addWidget(self.activity_name, 7, 0, 2, 2)
 
+        self.init_activity_buttons()
+
+        # self.layout.addWidget(self.add_button)
+        # self.layout.addWidget(self.edit_button)
+        # self.layout.addWidget(self.delete_button)
+        
+        self.layout.addLayout(self.mode_layout)
+        self.layout.addLayout(self.activity_layout)
         self.gui.setLayout(self.layout)
 
-    def init_buttons(self):
+    def init_activity_buttons(self):
         self.add_button = QtGui.QPushButton('add gesture')
         self.edit_button = QtGui.QPushButton('edit gesture')
         self.delete_button = QtGui.QPushButton("delete gesture")
@@ -71,18 +83,18 @@ class SvmNode(Node):
         self.edit_button.clicked.connect(self.on_edit_button_clicked)
         self.delete_button.clicked.connect(self.on_delete_button_clicked)
 
+
     def init_mode_buttons(self):
         self.label_mode = QtGui.QLabel('select mode:')
         self.layout.addWidget(self.label_mode)
 
         self.inactive_button = QtWidgets.QRadioButton('inactive')
-        self.layout.addWidget(self.inactive_button)
-
         self.training_button = QtWidgets.QRadioButton('training')
-        self.layout.addWidget(self.training_button)
-
         self.prediction_button = QtWidgets.QRadioButton('prediction')
-        self.layout.addWidget(self.prediction_button)
+        
+        self.mode_layout.addWidget(self.inactive_button, 0,0)
+        self.mode_layout.addWidget(self.training_button,0,1)
+        self.mode_layout.addWidget(self.prediction_button,0,2)
 
         self.training_button.clicked.connect(lambda: self.on_mode_button_clicked(self.training_button))
         self.prediction_button.clicked.connect(lambda: self.on_mode_button_clicked(self.prediction_button))
@@ -100,16 +112,22 @@ class SvmNode(Node):
     def on_mode_button_clicked(self, buttonType):
         if buttonType is self.training_button:
             self.state = GestureNodeState.TRAINING
-            self.train_help_label.setText("Select a gesture in the list and record performing the gesture" \
+            self.mode_text_label.setText("Select an activtiy in the list and record performing the activity" 
                                                 "by pressing the record button")
+            self.activity_name.setText('')
+            self.activity_name.setVisible(True)
 
         elif buttonType is self.prediction_button:
             self.state = GestureNodeState.PREDICTING
-            self.train_help_label.setText("")
+            self.mode_text_label.setText("Press 'Button 1' and execute an acitivity. After releasing it " 
+                                            " it will predict your activity")
+            self.activity_name.setVisible(False)
 
         else:
             self.state = GestureNodeState.INACTIVE
-            self.train_help_label.setText("")
+            self.mode_text_label.setText("The Node is inactive. Choose 'prediction'-mode to predict a activity"  
+                                            " or 'training'-mode to train a new activity")
+            self.activity_name.setVisible(False)
 
 
 
