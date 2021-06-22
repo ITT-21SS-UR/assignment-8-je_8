@@ -14,6 +14,8 @@ import pyqtgraph.flowchart.library as fclib
 from DIPPID import SensorUDP, SensorSerial, SensorWiimote
 from DIPPID_pyqtnode import BufferNode, DIPPIDNode
 
+# workload distributed equally
+# auth: eric blank & joshua benker
 
 # gesture node state
 class GestureNodeState(Enum):
