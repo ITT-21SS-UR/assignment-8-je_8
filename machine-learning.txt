@@ -1,3 +1,6 @@
+# auth: erik blank & joshua benker
+# workload distributed equally
+
 1) What is the title of the paper?
 
 > "Avoiding Pitfalls When Using Machine Learning in HCI Studies"
