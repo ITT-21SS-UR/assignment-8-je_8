@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 # -*- coding: utf-8 -*-
+import time
 
 from pyqtgraph.flowchart import Flowchart, Node
 from pyqtgraph.flowchart.library.common import CtrlNode
@@ -8,7 +9,7 @@ import pyqtgraph.flowchart.library as fclib
 from pyqtgraph.Qt import QtGui, QtCore
 import pyqtgraph as pg
 import numpy as np
-from DIPPID import SensorUDP, SensorSerial, SensorWiimote
+from DIPPID import SensorUDP
 import sys
 
 
@@ -42,7 +43,6 @@ fclib.registerNodeType(BufferNode, [('Data',)])
 class DIPPIDNode(Node):
     """
     Outputs sensor data from DIPPID supported hardware.
-
     Supported sensors: accelerometer (3 axis)
     Text input box allows for setting a Bluetooth MAC address or Port.
     Pressing the "connect" button tries connecting to the DIPPID device.
@@ -74,7 +74,7 @@ class DIPPIDNode(Node):
         self.ui = QtGui.QWidget()
         self.layout = QtGui.QGridLayout()
 
-        label = QtGui.QLabel("Port, BTADDR or TTY:")
+        label = QtGui.QLabel("Port:")
         self.layout.addWidget(label)
 
         self.text = QtGui.QLineEdit()
@@ -120,18 +120,8 @@ class DIPPIDNode(Node):
         if self.connect_button.text() != "connect" and self.connect_button.text() != "try again":
             return
 
-        address = self.text.text().strip()
         self.connect_button.setText("connecting...")
-
-        if '/dev/tty' in address: # serial tty
-            self.dippid = SensorSerial(address)
-        elif ':' in address:
-            self.dippid = SensorWiimote(address)
-        elif address.isnumeric():
-            self.dippid = SensorUDP(int(address))
-        else:
-            print(f'invalid address: {address}')
-            print('allowed types: UDP port, bluetooth address, path to /dev/tty*')
+        self.dippid = SensorUDP(int(self.text.text().strip()))
 
         if self.dippid is None:
             self.connect_button.setText("try again")
@@ -150,7 +140,15 @@ class DIPPIDNode(Node):
         if rate == 0:
             self.update_timer.stop()
         else:
-            self.update_timer.start(int(1000 / rate))
+            self.update_timer.start(1000 / rate)
+
+    def callback(self):
+        time.sleep(10)
+        self.get_sensor()
+
+    # method for returning the sensor
+    def get_sensor(self):
+        return self.dippid
 
     def process(self, **kwdargs):
         return {'accelX': np.array([self._acc_vals[0]]), 'accelY': np.array([self._acc_vals[1]]), 'accelZ': np.array([self._acc_vals[2]])}
