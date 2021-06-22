@@ -14,51 +14,52 @@ import pyqtgraph.flowchart.library as fclib
 from DIPPID import SensorUDP, SensorSerial, SensorWiimote
 from DIPPID_pyqtnode import BufferNode, DIPPIDNode
 
+
+# gesture node state
 class GestureNodeState(Enum):
     TRAINING = 1
     PREDICTING = 2
     INACTIVE = 3
 
-# implement a DisplayTextNode that displays the currently recognized/predicted category on the screen.
+
+# a DisplayTextNode that displays the currently recognized/predicted category on the screen.
 class DisplayTextNode(Node):
     nodeName = 'display'
 
-    def __init__(self, name):  
-        Node.__init__(self, name, terminals={  
+    def __init__(self, name):
+        Node.__init__(self, name, terminals={
             'dataIn': {'io': 'in'},
             'prediction': {'io': 'out'},
             })
         self.init_ui()
-    
+
+    # user interface for the displaytextnode
     def init_ui(self):
         self.ui = QtGui.QWidget()
         self.layout = QtGui.QGridLayout()
-        predict_label = QtGui.QLabel("Prediction:")
+        predict_label = QtGui.QLabel("prediction:")
         self.layout.addWidget(predict_label)
         self.text = QtGui.QLabel()
         self.text.setText("")
         self.layout.addWidget(self.text)
         self.ui.setLayout(self.layout)
-    
+
     def ctrlWidget(self):
         return self.ui
 
+    # sets the text to current prediction
     def process(self, **kargs):
-        prediction = kargs['dataIn'][0]
+        prediction = kargs['dataIn']
         self.text.setText(prediction)
-        return {'prediction': self.text}
-
-
-
 
 fclib.registerNodeType(DisplayTextNode, [('display',)])
 
-        
-# can be switched between training mode and prediction mode and "inactive" via buttons in the configuration pane. 
-# in training mode it continually reads in a sample (i.e. a feature vector consisting of multiple values, 
-# such as a list of frequency components) and trains a SVM classifier with this data (and previous data). 
+
+# can be switched between training mode and prediction mode and "inactive" via buttons in the configuration pane.
+# in training mode it continually reads in a sample (a feature vector consisting of multiple values,
+# such as a list of frequency components) and trains a SVM classifier with this data (and previous data).
 # The category for this sample can be defined by a text field in the control pane.
-# In prediction mode the SvmNode should read in a sample and output the predicted category as a string
+# In prediction mode the SvmNode can read in a sample and output the predicted category as a string
 class SvmNode(Node):
     nodeName = 'svm'
 
@@ -71,21 +72,21 @@ class SvmNode(Node):
 
     state = GestureNodeState.INACTIVE
     gestures_dict = {}
-    gesture_id = 0 
+    gesture_id = 0
 
-    def __init__(self, name):  
-        Node.__init__(self, name, terminals={  
+    def __init__(self, name):
+        Node.__init__(self, name, terminals={
             'dataIn': {'io': 'in'},
             'prediction': {'io': 'out'},
             })
-        self.prediction = '' 
-        # example gestures- add more?
-        self.saved_gestures = ['jump', 'run', 'throw'] 
+        self.prediction = ''
+        self.saved_gestures = []
         self.is_recording = False
-        #svm
-        self.svc = svm.SVC(kernel='rbf')
+        # svm
+        self.svc = svm.SVC()
         self.init_ui()
 
+    # initilize user interface
     def init_ui(self):
         self.ui = QtGui.QWidget()
         self.layout = QtGui.QVBoxLayout()
@@ -108,7 +109,7 @@ class SvmNode(Node):
 
         self.init_training_ui()
         self.init_prediction_ui()
-        
+
         self.gesture_widg.setLayout(self.gesture_layout)
         self.pred_widg.setLayout(self.pred_layout)
         self.layout.addLayout(self.mode_layout)
@@ -117,33 +118,33 @@ class SvmNode(Node):
         self.pred_widg.setVisible(False)
         self.ui.setLayout(self.layout)
 
+    # init ui for the mode: inactive, training and prediction
     def init_mode_ui(self):
         self.label_mode = QtGui.QLabel('select mode:')
         self.layout.addWidget(self.label_mode)
 
         self.inactive_button = QtWidgets.QRadioButton('inactive')
         self.inactive_button.setChecked(True)
-    
+
         self.training_button = QtWidgets.QRadioButton('training')
         self.prediction_button = QtWidgets.QRadioButton('prediction')
-        
-        self.mode_layout.addWidget(self.inactive_button, 0,0)
-        self.mode_layout.addWidget(self.training_button,0,1)
-        self.mode_layout.addWidget(self.prediction_button,0,2)
+
+        self.mode_layout.addWidget(self.inactive_button, 0, 0)
+        self.mode_layout.addWidget(self.training_button, 0, 1)
+        self.mode_layout.addWidget(self.prediction_button, 0, 2)
 
         self.training_button.clicked.connect(lambda: self.on_mode_button_clicked(self.training_button))
         self.prediction_button.clicked.connect(lambda: self.on_mode_button_clicked(self.prediction_button))
         self.inactive_button.clicked.connect(lambda: self.on_mode_button_clicked(self.inactive_button))
 
-
+    # user interface for the training-mode
     def init_training_ui(self):
         new_gesture_label = QtGui.QLabel("create a new gesture")
         self.gesture_layout.addWidget(new_gesture_label)
         self.gesture_name = QtGui.QLineEdit()
-        self.gesture_layout.addWidget(self.gesture_name,7,0)
+        self.gesture_layout.addWidget(self.gesture_name, 7, 0)
 
         self.gesture_select = QtWidgets.QComboBox()
-        # self.gesture_select.addItems(self.saved_gestures)
         self.add_button = QtGui.QPushButton('add gesture')
         edit_gesture_label = QtGui.QLabel("edit gesture")
         self.train_button = QtGui.QPushButton('train gesture')
@@ -167,7 +168,6 @@ class SvmNode(Node):
         self.record_button.clicked.connect(self.on_record_button_clicked)
         self.stop_record_button.clicked.connect(self.on_stop_record_button_clicked)
 
-
     # prediction ui: start and stop button
     def init_prediction_ui(self):
         new_pred_label = QtGui.QLabel("predict a gesture")
@@ -181,27 +181,28 @@ class SvmNode(Node):
         self.pred_start_button.clicked.connect(self.on_pred_start_button_clicked)
         self.pred_stop_button.clicked.connect(self.on_pred_stop_button_clicked)
 
-
     # new gesture is added to the list
     def on_add_button_clicked(self):
         self.saved_gestures.append(self.gesture_name.text())
         self.gesture_select.addItem(self.saved_gestures[-1])
-        #self.gestures_dict[self.gesture_id] = {}
         self.gestures_dict[self.gesture_name.text()] = []
         self.gesture_name.setText("")
         self.gesture_id += 1
 
-
+    # calls when the on train button was clicked
     def on_train_button_clicked(self):
         self.record_button.show()
         self.stop_record_button.show()
 
+    # starts recording
     def on_record_button_clicked(self):
         self.activity_recording(True)
-    
+
+    # stops recording
     def on_stop_record_button_clicked(self):
         self.activity_recording(False)
-    
+
+    # records an activity
     def activity_recording(self, is_recording):
         self.is_recording = is_recording
         if self.state == GestureNodeState.TRAINING:
@@ -210,20 +211,22 @@ class SvmNode(Node):
             else:
                 self.mode_text_label.setText(self.TRAINING_TEXT)
 
-
-    def on_delete_button_clicked(self):      
+    # delets actvity from list
+    def on_delete_button_clicked(self):
         gesture_selected = self.gesture_select.currentText()
         self.saved_gestures.remove(gesture_selected)
         self.gesture_select.clear()
         self.gesture_select.addItems(self.saved_gestures)
 
+    # prediction start
     def on_pred_start_button_clicked(self):
         self.is_recording = True
-        
+
+    # prediction stop
     def on_pred_stop_button_clicked(self):
         self.is_recording = False
-    
 
+    # checks different mode buttons
     def on_mode_button_clicked(self, buttonType):
         if buttonType is self.training_button:
             self.state = GestureNodeState.TRAINING
@@ -242,9 +245,10 @@ class SvmNode(Node):
             self.gesture_widg.setVisible(False)
             self.mode_text_label.setText(self.INACTIVE_TEXT)
 
-    def ctrlWidget(self):  
+    def ctrlWidget(self):
         return self.ui
 
+    # handles the training for the gestures and gives the svc learner input
     def handle_gesture_training(self, kargs):
         if self.is_recording:
             input_val = kargs['dataIn']
@@ -254,7 +258,6 @@ class SvmNode(Node):
         else:
             samples = []
             targets = []
-        
             for key in self.gestures_dict:
                 for feature in self.gestures_dict[key]:
                     feature = feature.flatten()
@@ -262,20 +265,23 @@ class SvmNode(Node):
                     targets.append(key)
 
             if not all(f == targets[0] for f in targets):
-                self.svm.fit(samples, targets)
-            
+                self.svc.fit(samples, targets)
 
+    # predicts a gesture category from sensor input
     def predict_gesture(self, kargs):
         if self.is_recording:
-            try: 
-                input_val = kargs['dataIn']
-                self.prediction = self.svc.predict(input_val)
+            try:
+                prediction = self.svc.predict([kargs['dataIn']])
+                print(prediction[0])
             except NotFittedError:
                 return
             for key in self.gestures_dict:
+                print(key)
                 if key == prediction[0]:
-                    return {'prediction': self.gestures_dict[key]}
+                    print("yes")
+                    return {'prediction': key}
 
+    # eiter calls the training or prediction method
     def process(self, **kargs):
         self.output = {'dataIn': "-"}
         if self.state == GestureNodeState.TRAINING:
@@ -293,8 +299,8 @@ fclib.registerNodeType(SvmNode, [('svm',)])
 class FftNode(Node):
     nodeName = 'fft'
 
-    def __init__(self, name):  
-        Node.__init__(self, name, terminals={  
+    def __init__(self, name):
+        Node.__init__(self, name, terminals={
             'accelX': {'io': 'in'},
             'accelY': {'io': 'in'},
             'accelZ': {'io': 'in'},
@@ -312,13 +318,14 @@ class FftNode(Node):
 fclib.registerNodeType(FftNode, [('fft',)])
 
 
+# create the notes and connects them
 def create_connect_nodes(chart):
     dippid_node = chart.createNode("DIPPID", pos=(0, 0))
     buffer_node_x = chart.createNode("Buffer", pos=(100, -200))
     buffer_node_y = chart.createNode("Buffer", pos=(100, 0))
     buffer_node_z = chart.createNode("Buffer", pos=(100, 200))
     fft_node = chart.createNode("fft", pos=(200, 100))
-    display_node = chart.createNode("display", pos=(400,0))
+    display_node = chart.createNode("display", pos=(400, 0))
     svm_node = chart.createNode("svm", pos=(300, 0))
 
     chart.connectTerminals(dippid_node['accelX'], buffer_node_x['dataIn'])
@@ -330,11 +337,12 @@ def create_connect_nodes(chart):
     chart.connectTerminals(fft_node['frequency'], svm_node['dataIn'])
     chart.connectTerminals(svm_node['prediction'], display_node['dataIn'])
 
+
 def start():
     app = QtWidgets.QApplication([])
 
     win = QtGui.QMainWindow()
-    win.resize(600,600)
+    win.resize(600, 600)
     win.setWindowTitle("Activity Recognizer")
     central_widget = QtGui.QWidget()
     win.setCentralWidget(central_widget)
@@ -343,7 +351,7 @@ def start():
     central_widget.setLayout(layout)
     fc = Flowchart(terminals={'out': dict(io='out')})
     layout.addWidget(fc.widget(), 0, 0, 2, 1)
-    
+
     create_connect_nodes(fc)
 
     win.show()
