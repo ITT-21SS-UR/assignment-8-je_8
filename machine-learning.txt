@@ -1,17 +1,18 @@
 1) What is the title of the paper?
 
-"Avoiding Pitfalls When Using Machine Learning in HCI Studies"
+> "Avoiding Pitfalls When Using Machine Learning in HCI Studies"
 
 <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 2) What are some common use cases for machine learning in practical applications or research prototypes?
 
-Model human behavior, develop and predict novel user interactions, gestures regognition, 
+> Model human behavior, develop and predict novel user interactions, gestures regognition, 
 optimize system resources, provide intelligent mobile notifications
+
 <><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><><>
 3. Which problems of machine learning do the authors of the paper identify? 
    Explain one of them in detail.
 
-One problem of machine learning methods is that the prediction accuracy cannot replace 
+> One problem of machine learning methods is that the prediction accuracy cannot replace 
 classic hypothesis testing and correlation or causation analysis. This accours e.g. when acquiring 
 conclusions about human behavior. Researches have be really careful with interpretations about the 
 classifications of human behavior and if they are really linked to the emotional state of the users.
@@ -21,8 +22,21 @@ classifications of human behavior and if they are really linked to the emotional
 4. What are the credentials of the authors with regard to machine learning? 
    Have they published research on machine learning (or using machine-learning techniques) previously?
 
+> Vassillis Kostakos (PhD): Professor at the University of Melbourne for human computer interaction, 
+pioneering editors of publications of the ACM, winner of 2014 "SIGCHI Best Talk Award". His research
+focuses on mobile technologies for smartphones, user-oriented design and machine learning.
 
-Recently published research on machine learning:
-Kostakos, V., Ferreira, D., Goncalves, J., and Hosio, S. Modelling smartphone usage: 
+> Mirco Musolesi: Professor of Computer Science at the University College in London & University of Bologna
+researcher at the Alan Turing Institute in the UK (National Institute for Data Science and Artificial 
+Intelligence). His research focuses on machine learning and artificial intelligence.
+
+
+> Recently published research on machine learning:
+
+> Kostakos, V., Ferreira, D., Goncalves, J., and Hosio, S. Modelling smartphone usage: 
 A Markov state transition model. Proc. of the 2016 International Joint Conference on 
 Pervasive and Ubiquitous Computing. ACM, New York, 2016.
+
+> Mehrotra, A., Musolesi, M., Hendley, R., and Pejovic, V. Designing content-driven intelligent 
+notification mechanism for mobile applications. Proc. of the 2016 International Joint Conference 
+on Pervasive and Ubiquitous Computing. ACM, New York, 2015.
